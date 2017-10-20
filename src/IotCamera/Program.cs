@@ -41,7 +41,6 @@ namespace IotCamera
                 ulong interrupt_time = WiringPi.millis();
                 if (interrupt_time - last_interrupt_time > 500)
                 {
-                    Console.WriteLine("Detected something...");
                     last_interrupt_time = interrupt_time;
                     if (Camera.IsBusy)
                     {
@@ -49,11 +48,11 @@ namespace IotCamera
                         return;
                     }
                     led.Write(true);
-                    //Console.WriteLine($"Capturing image...");
+                    Console.WriteLine("Capturing image...");
                     var result = await Camera.CaptureImageJpegAsync(3280, 2464, default);
                     await File.WriteAllBytesAsync($"image-{DateTime.UtcNow.Ticks}.jpg", result);
                     led.Write(false);
-                    //Console.WriteLine($"Image captured.");
+                    Console.WriteLine("Image captured.");
                 }
             }
         }
