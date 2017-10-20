@@ -26,10 +26,6 @@ namespace IotCamera
             button.InputPullMode = GpioPinResistorPullMode.PullDown;
             button.PinMode = GpioPinDriveMode.Input;
 
-            Console.WriteLine("Calibrating...");
-
-            await Task.Delay(60 * 1000);
-
             Console.WriteLine("Ready!");
 
             button.RegisterInterruptCallback(EdgeDetection.RisingAndFallingEdges, OnButtonClick);
