@@ -10,65 +10,88 @@ namespace IotCamera
 {
     static class Program
     {
-        private static ulong last_interrupt_time = 0;
-        private static GpioPin led;
-        private static GpioPin button;
+        private static Led led;
+        private static RGBLed rgbLed;
+        private static Button button;
 
         async static Task Main(string[] args)
         {
             // Initialize
             // LED
-            led = Gpio.Pin21;
-            led.PinMode = GpioPinDriveMode.Output;
+            led = new Led(Gpio.Pin21);
+
+            // RGB LED
+            rgbLed = new RGBLed(Gpio.Pin28, Gpio.Pin29, Gpio.Pin03);
+
+            CancellationTokenSource cts = null;
 
             // Button
-            button = Gpio.Pin22;
-            button.InputPullMode = GpioPinResistorPullMode.PullDown;
-            button.PinMode = GpioPinDriveMode.Input;
+            button = new Button(Gpio.Pin22);
+            button.Click += async (s, e) =>
+            {
+                cts = new CancellationTokenSource();
+                StartBlinking(cts.Token);
 
-            Console.WriteLine("Ready!");
+                if (Camera.IsBusy)
+                {
+                    Console.WriteLine("Camera is busy.");
+                    return;
+                }
+                led.State = true;
+                Console.WriteLine("Capturing image...");
+                var result = await Camera.CaptureImageJpegAsync(3280, 2464, default);
+                await File.WriteAllBytesAsync($"image-{DateTime.UtcNow.Ticks}.jpg", result);
+                led.State = false;
+                Console.WriteLine("Image captured.");
 
-            button.RegisterInterruptCallback(EdgeDetection.RisingAndFallingEdges, OnButtonClick);
+                await Task.Delay(3000);
+
+                cts.Cancel();
+            };
 
             Console.WriteLine("Press any key to exit...");
             Console.ReadKey();
         }
 
-        static async void OnButtonClick()
+        private static void StartBlinking(CancellationToken token)
         {
-            if (!button.Read())
-            {
-                ulong interrupt_time = WiringPi.millis();
-                if (interrupt_time - last_interrupt_time > 500)
-                {
-                    last_interrupt_time = interrupt_time;
-                    if (Camera.IsBusy)
-                    {
-                        Console.WriteLine("Camera is busy.");
-                        return;
-                    }
-                    led.Write(true);
-                    Console.WriteLine("Capturing image...");
-                    var result = await Camera.CaptureImageJpegAsync(3280, 2464, default);
-                    await File.WriteAllBytesAsync($"image-{DateTime.UtcNow.Ticks}.jpg", result);
-                    led.Write(false);
-                    Console.WriteLine("Image captured.");
-                }
-            }
+            Task.Run(() => Blink(token), token);
         }
 
-        private static async Task RunBlink()
+        private static async Task Blink(CancellationToken ct)
         {
-            var led = Gpio.Pin21;
-            led.PinMode = GpioPinDriveMode.Output;
-            var ledState = false;
-
             while (true)
             {
-                ledState = !ledState;
-                led.Write(ledState);
+                if (ct.IsCancellationRequested)
+                    break;
+
+                SetColor(225, 0, 0);
+
+                await Task.Delay(1000);
+
+                if (ct.IsCancellationRequested)
+                    break;
+
+                SetColor(0, 225, 0);
+
+                await Task.Delay(1000);
+
+                if (ct.IsCancellationRequested)
+                    break;
+
+                SetColor(0, 0, 225);
+
                 await Task.Delay(1000);
             }
+
+            rgbLed.State = false;
+        }
+
+        private static void SetColor(int r, int g, int b)
+        {
+            rgbLed.Red = r;
+            rgbLed.Green = g;
+            rgbLed.Blue = b;
         }
     }
 }
