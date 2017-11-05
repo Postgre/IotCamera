@@ -6,14 +6,15 @@ using Unosquare.RaspberryIO.Gpio;
 using static Unosquare.RaspberryIO.Pi;
 using Unosquare.RaspberryIO.Native;
 
-namespace IotCamera
+namespace Components
 {
 
-    public class Led
+    public class Relay
     {
         private GpioPin gpioPin;
+        private ulong last_interrupt_time;
 
-        public Led(GpioPin gpioPin)
+        public Relay(GpioPin gpioPin)
         {
             this.gpioPin = gpioPin;
 

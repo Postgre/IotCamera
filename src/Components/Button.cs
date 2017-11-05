@@ -6,7 +6,7 @@ using Unosquare.RaspberryIO.Gpio;
 using static Unosquare.RaspberryIO.Pi;
 using Unosquare.RaspberryIO.Native;
 
-namespace IotCamera
+namespace Components
 {
 
     public class Button

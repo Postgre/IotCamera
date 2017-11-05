@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Unosquare.RaspberryIO.Gpio;
 using static Unosquare.RaspberryIO.Pi;
 using Unosquare.RaspberryIO.Native;
+using Components;
 
 namespace IotCamera
 {
@@ -12,6 +13,7 @@ namespace IotCamera
     {
         private static Led led;
         private static RGBLed rgbLed;
+        private static Relay relay;
         private static Button button;
 
         async static Task Main(string[] args)
@@ -23,6 +25,9 @@ namespace IotCamera
             // RGB LED
             rgbLed = new RGBLed(Gpio.Pin28, Gpio.Pin29, Gpio.Pin03);
 
+            // Relay
+            relay = new Relay(Gpio.Pin04);
+
             CancellationTokenSource cts = null;
 
             // Button
@@ -31,6 +36,8 @@ namespace IotCamera
             {
                 cts = new CancellationTokenSource();
                 StartBlinking(cts.Token);
+
+                relay.State = true;
 
                 if (Camera.IsBusy)
                 {
@@ -45,6 +52,8 @@ namespace IotCamera
                 Console.WriteLine("Image captured.");
 
                 await Task.Delay(3000);
+
+                relay.State = false;
 
                 cts.Cancel();
             };
