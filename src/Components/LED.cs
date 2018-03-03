@@ -23,6 +23,8 @@ namespace Components
         private void Initialize()
         {
             gpioPin.PinMode = GpioPinDriveMode.Output;
+
+            State = false;
         }
 
         public bool State

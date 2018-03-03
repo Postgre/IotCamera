@@ -33,6 +33,8 @@ namespace Components
             redPin.StartSoftPwm(0, 225);
             greenPin.StartSoftPwm(0, 225);
             bluePin.StartSoftPwm(0, 225);
+
+            State = false;
         }
 
         public bool State
@@ -62,6 +64,13 @@ namespace Components
         {
             get => bluePin.SoftPwmValue;
             set => bluePin.SoftPwmValue = value;
+        }
+
+        public void SetColor(int red, int green, int blue)
+        {
+            Red = red;
+            Green = green;
+            Blue = blue;
         }
     }
 }

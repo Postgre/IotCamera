@@ -10,11 +10,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Unosquare.Raspberry.IO" Version="0.12.0" />
+    <PackageReference Include="Unosquare.Raspberry.IO" Version="0.13.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Components\Components.csproj" />
   </ItemGroup>
+
+  <PropertyGroup>
+    <SshDeployHost>192.168.1.254</SshDeployHost>
+    <SshDeployTargetPath>/home/pi/target</SshDeployTargetPath>
+    <SshDeployUsername>pi</SshDeployUsername>
+    <SshDeployPassword>raspberry</SshDeployPassword>
+  </PropertyGroup>
 
 </Project>

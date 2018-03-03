@@ -12,7 +12,6 @@ namespace Components
     public class Relay
     {
         private GpioPin gpioPin;
-        private ulong last_interrupt_time;
 
         public Relay(GpioPin gpioPin)
         {

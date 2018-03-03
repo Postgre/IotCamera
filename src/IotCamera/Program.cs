@@ -1,106 +1,116 @@
-﻿using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using Unosquare.RaspberryIO.Gpio;
-using static Unosquare.RaspberryIO.Pi;
-using Unosquare.RaspberryIO.Native;
+﻿using static Unosquare.RaspberryIO.Pi;
 using Components;
+using Unosquare.RaspberryIO.Gpio;
+using System.Linq;
+using System.Threading.Tasks;
+using System;
 
 namespace IotCamera
 {
     static class Program
     {
-        private static Led led;
         private static RGBLed rgbLed;
-        private static Relay relay;
         private static Button button;
 
-        async static Task Main(string[] args)
+        static void Main(string[] args)
         {
-            // Initialize
-            // LED
-            led = new Led(Gpio.Pin21);
+            Tag();
+        }
 
-            // RGB LED
-            rgbLed = new RGBLed(Gpio.Pin28, Gpio.Pin29, Gpio.Pin03);
+        private static void Test() 
+        {
+            rgbLed = new RGBLed(
+            Gpio.GetPinByBcmPinNumber(16),
+            Gpio.GetPinByBcmPinNumber(20),
+            Gpio.GetPinByBcmPinNumber(21));
 
-            // Relay
-            relay = new Relay(Gpio.Pin04);
-
-            CancellationTokenSource cts = null;
-
-            // Button
-            button = new Button(Gpio.Pin22);
+            button = new Button(Gpio.GetPinByBcmPinNumber(4));
             button.Click += async (s, e) =>
             {
-                cts = new CancellationTokenSource();
-                StartBlinking(cts.Token);
+                Console.WriteLine("Button was pressed.");
 
-                relay.State = true;
+                rgbLed.SetColor(255, 0, 0);
 
-                if (Camera.IsBusy)
-                {
-                    Console.WriteLine("Camera is busy.");
-                    return;
-                }
-                led.State = true;
-                Console.WriteLine("Capturing image...");
-                var result = await Camera.CaptureImageJpegAsync(3280, 2464, default);
-                await File.WriteAllBytesAsync($"image-{DateTime.UtcNow.Ticks}.jpg", result);
-                led.State = false;
-                Console.WriteLine("Image captured.");
+                await Task.Delay(1000);
 
-                await Task.Delay(3000);
+                rgbLed.SetColor(0, 255, 0);
 
-                relay.State = false;
+                await Task.Delay(1000);
 
-                cts.Cancel();
+                rgbLed.SetColor(0, 0, 255);
+
+                await Task.Delay(1000);
+
+                rgbLed.State = false;
             };
 
             Console.WriteLine("Press any key to exit...");
             Console.ReadKey();
         }
 
-        private static void StartBlinking(CancellationToken token)
+        private static void Tag()
         {
-            Task.Run(() => Blink(token), token);
-        }
+            var mFRC522 = new MFRC522();
 
-        private static async Task Blink(CancellationToken ct)
-        {
             while (true)
             {
-                if (ct.IsCancellationRequested)
-                    break;
+                // Scan for cards
+                var (status, TagType) = mFRC522.Request(MFRC522.PICC_REQIDL);
 
-                SetColor(225, 0, 0);
+                // If a card is found
+                if (status == MFRC522.MI_OK)
+                {
+                    Console.WriteLine("Card detected");
+                }
 
-                await Task.Delay(1000);
+                // Get the UID of the card
+                var (status2, uid) = mFRC522.Anticoll();
 
-                if (ct.IsCancellationRequested)
-                    break;
+                // If we have the UID, continue
+                if (status2 == MFRC522.MI_OK)
+                {
+                    // Print UID
+                    Console.WriteLine("Card read UID: " + (uid[0]) + "," + (uid[1]) + "," + (uid[2]) + "," + (uid[3]));
 
-                SetColor(0, 225, 0);
+                    // This is the default key for authentication
+                    var key = new byte[] { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
-                await Task.Delay(1000);
+                    // Select the scanned tag
+                    mFRC522.SelectTag(uid);
 
-                if (ct.IsCancellationRequested)
-                    break;
+                    // Authenticate
+                    var status3 = mFRC522.Auth(MFRC522.PICC_AUTHENT1A, 8, key, uid);
 
-                SetColor(0, 0, 225);
-
-                await Task.Delay(1000);
+                    // Check if authenticated
+                    if (status3 == MFRC522.MI_OK)
+                    {
+                        mFRC522.ReadSpi(8);
+                        mFRC522.StopCrypto1();
+                    }
+                    else
+                    {
+                        Console.WriteLine("Authentication error");
+                    }
+                }
             }
+        }
+    }
 
-            rgbLed.State = false;
+    public static class GpioExtensions
+    {
+        public static GpioPin GetPinByNumber(this GpioController controller, int pinNumber)
+        {
+            return controller.Pins.FirstOrDefault(pin => pin.PinNumber == pinNumber);
         }
 
-        private static void SetColor(int r, int g, int b)
+        public static GpioPin GetPinByBcmPinNumber(this GpioController controller, int pinNumber)
         {
-            rgbLed.Red = r;
-            rgbLed.Green = g;
-            rgbLed.Blue = b;
+            return controller.Pins.FirstOrDefault(pin => pin.BcmPinNumber == pinNumber);
+        }
+
+        public static GpioPin GetPinByWiringPiPinNumber(this GpioController controller, int pinNumber)
+        {
+            return controller.Pins.FirstOrDefault(pin => pin.WiringPiPinNumber == (WiringPiPin)pinNumber);
         }
     }
 }
